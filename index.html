@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="color-scheme" content="dark" />
+  <title>장원 SwitchBot 웹 허브</title>
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      color: #f8fafc;
+      background: #050a12;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #10233d 0, #07111f 38%, #03070d 100%);
+      color: #f8fafc;
+    }
+    main {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: max(22px, env(safe-area-inset-top)) 16px max(36px, env(safe-area-inset-bottom));
+    }
+    h1 { font-size: 28px; margin: 8px 0 6px; letter-spacing: -0.04em; }
+    h2 { font-size: 18px; margin: 0 0 12px; }
+    p { line-height: 1.55; }
+    .muted { color: #9fb0c6; font-size: 14px; }
+    .hero {
+      padding: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 24px;
+      background: rgba(8, 18, 32, 0.78);
+      box-shadow: 0 18px 60px rgba(0,0,0,.28);
+      backdrop-filter: blur(14px);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, .12);
+      color: #7dd3fc;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .status-card {
+      border: 1px solid rgba(148,163,184,.16);
+      background: rgba(15,23,42,.72);
+      border-radius: 16px;
+      padding: 13px;
+      min-height: 82px;
+    }
+    .status-card strong { display: block; font-size: 13px; color: #a9bdd5; margin-bottom: 8px; }
+    .status-value { font-size: 15px; font-weight: 800; word-break: break-word; }
+    .ok { color: #6ee7b7; }
+    .warn { color: #fbbf24; }
+    .bad { color: #fda4af; }
+    .panel {
+      margin-top: 14px;
+      padding: 16px;
+      border: 1px solid rgba(148,163,184,.16);
+      border-radius: 20px;
+      background: rgba(15,23,42,.66);
+    }
+    .buttons { display: grid; gap: 10px; }
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 15px;
+      min-height: 52px;
+      padding: 13px 16px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #03111e;
+      background: #7dd3fc;
+      transition: transform .08s ease, opacity .2s ease;
+    }
+    button:active { transform: scale(.985); }
+    button:disabled { opacity: .45; cursor: default; }
+    button.secondary { color: #e2e8f0; background: #24344b; }
+    button.ghost { color: #b9c8da; background: transparent; border: 1px solid rgba(148,163,184,.28); }
+    button.danger { color: #fff; background: #e11d48; }
+    button.power {
+      min-height: 120px;
+      border-radius: 28px;
+      font-size: 25px;
+      color: white;
+      background: linear-gradient(145deg, #ef4444, #be123c);
+      box-shadow: 0 18px 40px rgba(225,29,72,.28);
+    }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .secret-row {
+      display: grid;
+      gap: 6px;
+      margin-top: 11px;
+    }
+    .label { color: #a9bdd5; font-size: 12px; font-weight: 700; }
+    code, .codebox {
+      display: block;
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: #020617;
+      color: #c4f1ff;
+      font-size: 12px;
+      line-height: 1.45;
+      word-break: break-all;
+      white-space: pre-wrap;
+      border: 1px solid rgba(125,211,252,.14);
+    }
+    .notice {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(245,158,11,.10);
+      border: 1px solid rgba(245,158,11,.24);
+      color: #fde68a;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .success-notice {
+      background: rgba(16,185,129,.10);
+      border-color: rgba(16,185,129,.24);
+      color: #a7f3d0;
+    }
+    #log {
+      max-height: 210px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #b7c5d7;
+      background: #020617;
+      border-radius: 12px;
+      padding: 10px;
+      white-space: pre-wrap;
+    }
+
+    .screen-saver {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background: #000;
+      color: #46515e;
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .screen-saver .saver-content {
+      position: absolute;
+      max-width: 280px;
+      transition: transform 1.2s ease;
+    }
+    .screen-saver .saver-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-bottom: 12px;
+      border-radius: 50%;
+      background: #14532d;
+      box-shadow: 0 0 14px rgba(34,197,94,.22);
+    }
+    .screen-saver strong { display: block; color: #374151; font-size: 14px; }
+    .screen-saver small { display: block; margin-top: 8px; color: #252b33; font-size: 11px; line-height: 1.5; }
+    .hidden { display: none !important; }
+    .spacer { height: 8px; }
+    .footer { text-align: center; color: #64748b; font-size: 11px; margin-top: 20px; }
+    @media (max-width: 520px) {
+      .grid, .two { grid-template-columns: 1fr; }
+      h1 { font-size: 25px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section id="hubApp" class="hero">
+    <span class="badge">📱 iPhone 11 Pro용</span>
+    <h1>장원 SwitchBot 웹 허브</h1>
+    <p class="muted">Bluefy에서 이 페이지를 열고 SwitchBot Bot을 연결하면, 다른 아이폰에서 인터넷으로 PC 전원 버튼을 누를 수 있습니다.</p>
+
+    <div id="browserWarning" class="notice hidden"></div>
+
+    <div class="grid">
+      <div class="status-card"><strong>브라우저</strong><div id="browserStatus" class="status-value">확인 중</div></div>
+      <div class="status-card"><strong>SwitchBot</strong><div id="botStatus" class="status-value warn">연결 안 됨</div></div>
+      <div class="status-card"><strong>원격 수신</strong><div id="relayStatus" class="status-value warn">중지됨</div></div>
+      <div class="status-card"><strong>마지막 동작</strong><div id="lastAction" class="status-value">없음</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>1. SwitchBot 연결</h2>
+      <div class="buttons">
+        <button id="connectBtn">🔵 SwitchBot 자동 찾기</button>
+        <button id="connectAllBtn" class="ghost">기기가 안 보이면 모든 BLE 기기 보기</button>
+        <button id="testBtn" class="secondary" disabled>🧪 시험으로 한 번 누르기</button>
+      </div>
+      <div class="notice">기기 선택창에서는 <b>Bot</b>, <b>WoHand</b>, <b>SwitchBot</b>처럼 표시된 항목을 고르세요. SwitchBot 공식 앱은 연결 시험 중에는 완전히 종료해 두는 편이 좋습니다.</div>
+    </div>
+
+    <div class="panel">
+      <h2>2. 원격 허브 시작</h2>
+      <div class="buttons">
+        <button id="startBtn" disabled>📡 허브 모드 시작</button>
+        <button id="stopBtn" class="secondary" disabled>허브 모드 중지</button>
+      </div>
+      <div class="secret-row">
+        <span class="label">원격 채널</span>
+        <code id="topicText"></code>
+      </div>
+      <div class="secret-row">
+        <span class="label">보안키</span>
+        <code id="secretText"></code>
+      </div>
+      <div class="two" style="margin-top:10px">
+        <button id="shareBtn" class="secondary">📤 메인 아이폰으로 원격 버튼 공유</button>
+        <button id="regenBtn" class="ghost">🔄 채널·보안키 새로 만들기</button>
+      </div>
+      <div class="notice success-notice">허브를 시작한 뒤 이 화면을 앞에 계속 띄우고, 충전기와 Wi‑Fi를 유지하세요. 옆면 잠금 버튼을 누르면 수신이 멈출 수 있습니다.</div>
+    </div>
+
+    <div class="panel">
+      <h2>진단 기록</h2>
+      <div id="log">대기 중…</div>
+      <button id="copyLogBtn" class="ghost" style="margin-top:10px;width:100%">기록 복사</button>
+    </div>
+  </section>
+
+  <section id="remoteApp" class="hero hidden">
+    <span class="badge">⚡ 원격 전원 버튼</span>
+    <h1>PC 켜기</h1>
+    <p class="muted">집의 iPhone 11 Pro에서 웹 허브가 실행 중일 때 사용하세요.</p>
+    <button id="powerBtn" class="power">⏻<br>PC 전원 누르기</button>
+    <div id="remoteResult" class="notice" style="margin-top:16px">대기 중</div>
+    <div class="notice">버튼을 연속으로 누르지 마세요. PC가 이미 켜져 있으면 전원 버튼 설정에 따라 절전이나 종료가 될 수 있습니다.</div>
+  </section>
+
+  <div class="footer">개인 소유 SwitchBot 제어용 · Topic과 보안키는 이 브라우저에만 저장됩니다.</div>
+
+  <div id="screenSaver" class="screen-saver hidden" role="button" aria-label="허브 화면으로 돌아가기">
+    <div id="saverContent" class="saver-content">
+      <span class="saver-dot"></span>
+      <strong>허브 실행 중</strong>
+      <small>화면 잠금 버튼은 누르지 마세요.<br>화면을 탭하면 돌아갑니다.</small>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const SERVICE_UUID = 'cba20d00-224d-11e6-9fb8-0002a5d5c51b';
+  const COMMAND_UUID = 'cba20002-224d-11e6-9fb8-0002a5d5c51b';
+  const PRESS_BYTES = new Uint8Array([0x57, 0x01, 0x00]);
+  const TOPIC_KEY = 'jw_switchbot_topic_v1';
+  const SECRET_KEY = 'jw_switchbot_secret_v1';
+  const DEVICE_ID_KEY = 'jw_switchbot_device_id_v1';
+  const MIN_PRESS_INTERVAL_MS = 8000;
+  const COMMAND_MAX_AGE_MS = 90_000;
+
+  let botDevice = null;
+  let commandCharacteristic = null;
+  let relaySocket = null;
+  let reconnectTimer = null;
+  let relayRunning = false;
+  let wakeLock = null;
+  let saverTimer = null;
+  let saverMoveTimer = null;
+  let lastPressAt = 0;
+  let pressing = false;
+  const seenNonces = new Set();
+  const logLines = [];
+
+  const $ = (id) => document.getElementById(id);
+
+  function log(message, kind = 'info') {
+    const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    const mark = kind === 'ok' ? '✅' : kind === 'error' ? '❌' : kind === 'warn' ? '⚠️' : '•';
+    logLines.push(`[${time}] ${mark} ${message}`);
+    if (logLines.length > 100) logLines.shift();
+    if ($('log')) {
+      $('log').textContent = logLines.join('\n');
+      $('log').scrollTop = $('log').scrollHeight;
+    }
+  }
+
+  function setStatus(id, text, cls = '') {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = text;
+    el.className = `status-value ${cls}`.trim();
+  }
+
+  function randomBase64Url(byteLength) {
+    const bytes = new Uint8Array(byteLength);
+    crypto.getRandomValues(bytes);
+    let binary = '';
+    bytes.forEach((b) => { binary += String.fromCharCode(b); });
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function ensureCredentials() {
+    let topic = localStorage.getItem(TOPIC_KEY);
+    let secret = localStorage.getItem(SECRET_KEY);
+    if (!topic || !/^[A-Za-z0-9_-]{20,64}$/.test(topic)) {
+      topic = `jwpc-${randomBase64Url(18)}`;
+      localStorage.setItem(TOPIC_KEY, topic);
+    }
+    if (!secret || secret.length < 30) {
+      secret = randomBase64Url(32);
+      localStorage.setItem(SECRET_KEY, secret);
+    }
+    return { topic, secret };
+  }
+
+  function remoteUrl(topic, secret) {
+    const base = `${location.origin}${location.pathname}`;
+    const hash = new URLSearchParams({ mode: 'remote', topic, secret });
+    return `${base}#${hash.toString()}`;
+  }
+
+  function refreshCredentialUI() {
+    const { topic, secret } = ensureCredentials();
+    $('topicText').textContent = topic;
+    $('secretText').textContent = secret;
+  }
+
+  function bytesToBase64Url(bytes) {
+    let binary = '';
+    bytes.forEach((b) => { binary += String.fromCharCode(b); });
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  async function hmac(secret, text) {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+    );
+    const signature = await crypto.subtle.sign('HMAC', key, enc.encode(text));
+    return bytesToBase64Url(new Uint8Array(signature));
+  }
+
+  function safeEqual(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    return diff === 0;
+  }
+
+  function isBluefy() {
+    return /Bluefy|WebBLE/i.test(navigator.userAgent);
+  }
+
+  function updateBrowserStatus() {
+    if (!navigator.bluetooth) {
+      setStatus('browserStatus', 'Web Bluetooth 없음', 'bad');
+      $('browserWarning').classList.remove('hidden');
+      $('browserWarning').innerHTML = '<b>Safari에서는 작동하지 않습니다.</b> 공폰에 무료 Bluefy 앱을 설치하고, Bluefy 안에서 이 주소를 다시 여세요.';
+      return;
+    }
+    if (isBluefy()) {
+      setStatus('browserStatus', 'Bluefy · 사용 가능', 'ok');
+      log('Bluefy Web Bluetooth 사용 가능', 'ok');
+    } else {
+      setStatus('browserStatus', 'BLE 브라우저 감지', 'warn');
+      $('browserWarning').classList.remove('hidden');
+      $('browserWarning').textContent = 'iPhone에서는 Bluefy로 여는 것이 가장 확실합니다.';
+      log('Bluefy가 아닌 브라우저로 감지됨', 'warn');
+    }
+  }
+
+
+  function moveSaverContent() {
+    const el = $('saverContent');
+    if (!el) return;
+    const x = Math.round((Math.random() - 0.5) * 120);
+    const y = Math.round((Math.random() - 0.5) * 180);
+    el.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  function showScreenSaverSoon() {
+    clearTimeout(saverTimer);
+    clearInterval(saverMoveTimer);
+    saverTimer = setTimeout(() => {
+      if (!relayRunning) return;
+      $('screenSaver').classList.remove('hidden');
+      moveSaverContent();
+      saverMoveTimer = setInterval(moveSaverContent, 60_000);
+      log('OLED 보호용 검은 화면 모드 시작', 'ok');
+    }, 6000);
+  }
+
+  function hideScreenSaver() {
+    clearTimeout(saverTimer);
+    clearInterval(saverMoveTimer);
+    saverTimer = null;
+    saverMoveTimer = null;
+    $('screenSaver')?.classList.add('hidden');
+  }
+
+  async function requestWakeProtection() {
+    try {
+      if (navigator.bluetooth && typeof navigator.bluetooth.setScreenDimEnabled === 'function') {
+        await navigator.bluetooth.setScreenDimEnabled(false);
+        log('Bluefy 화면 잠자기 방지 요청 완료', 'ok');
+      }
+    } catch (err) {
+      log(`Bluefy 화면 방지 API 실패: ${err.message}`, 'warn');
+    }
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        log('화면 깨우기 잠금 활성화', 'ok');
+      }
+    } catch (err) {
+      log(`화면 깨우기 잠금 실패: ${err.message}`, 'warn');
+    }
+  }
+
+  async function releaseWakeProtection() {
+    try {
+      if (wakeLock) await wakeLock.release();
+    } catch (_) {}
+    wakeLock = null;
+    try {
+      if (navigator.bluetooth && typeof navigator.bluetooth.setScreenDimEnabled === 'function') {
+        await navigator.bluetooth.setScreenDimEnabled(true);
+      }
+    } catch (_) {}
+  }
+
+  async function connectSelectedDevice(device) {
+    if (!device || !device.gatt) throw new Error('선택한 기기의 GATT 연결을 사용할 수 없습니다.');
+    botDevice = device;
+    localStorage.setItem(DEVICE_ID_KEY, device.id || '');
+    botDevice.addEventListener('gattserverdisconnected', () => {
+      commandCharacteristic = null;
+      setStatus('botStatus', '연결 끊김 · 재연결 중', 'warn');
+      log('SwitchBot 연결이 끊겼습니다.', 'warn');
+      if (relayRunning) scheduleBotReconnect();
+    });
+
+    setStatus('botStatus', '연결 중', 'warn');
+    log(`기기 연결 중: ${device.name || '이름 없음'}`);
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(SERVICE_UUID);
+    commandCharacteristic = await service.getCharacteristic(COMMAND_UUID);
+    setStatus('botStatus', `${device.name || 'SwitchBot'} 연결됨`, 'ok');
+    $('testBtn').disabled = false;
+    $('startBtn').disabled = false;
+    log('SwitchBot 명령 특성 연결 성공', 'ok');
+  }
+
+  async function chooseBot(acceptAll = false) {
+    if (!navigator.bluetooth) throw new Error('Bluefy에서 이 페이지를 열어야 합니다.');
+    const options = acceptAll
+      ? { acceptAllDevices: true, optionalServices: [SERVICE_UUID] }
+      : { filters: [{ services: [SERVICE_UUID] }], optionalServices: [SERVICE_UUID] };
+    const device = await navigator.bluetooth.requestDevice(options);
+    await connectSelectedDevice(device);
+  }
+
+  async function reconnectRememberedDevice() {
+    if (!navigator.bluetooth || typeof navigator.bluetooth.getDevices !== 'function') return false;
+    const savedId = localStorage.getItem(DEVICE_ID_KEY);
+    if (!savedId) return false;
+    try {
+      const granted = await navigator.bluetooth.getDevices();
+      const device = granted.find((d) => d.id === savedId);
+      if (!device) return false;
+      await connectSelectedDevice(device);
+      log('기억된 SwitchBot에 자동 재연결됨', 'ok');
+      return true;
+    } catch (err) {
+      log(`자동 재연결 실패: ${err.message}`, 'warn');
+      return false;
+    }
+  }
+
+  function scheduleBotReconnect() {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(async () => {
+      if (!relayRunning || !botDevice) return;
+      try {
+        await connectSelectedDevice(botDevice);
+      } catch (err) {
+        log(`SwitchBot 재연결 실패: ${err.message}`, 'warn');
+        scheduleBotReconnect();
+      }
+    }, 3500);
+  }
+
+  async function pressBot(source = '수동') {
+    const now = Date.now();
+    if (pressing) throw new Error('이미 누르는 중입니다.');
+    if (now - lastPressAt < MIN_PRESS_INTERVAL_MS) {
+      const wait = Math.ceil((MIN_PRESS_INTERVAL_MS - (now - lastPressAt)) / 1000);
+      throw new Error(`연속 누름 방지 중입니다. ${wait}초 뒤 다시 시도하세요.`);
+    }
+
+    if (!commandCharacteristic || !botDevice?.gatt?.connected) {
+      if (botDevice) await connectSelectedDevice(botDevice);
+      else if (!(await reconnectRememberedDevice())) throw new Error('먼저 SwitchBot을 연결하세요.');
+    }
+
+    pressing = true;
+    try {
+      const props = commandCharacteristic.properties || {};
+      if (props.write && typeof commandCharacteristic.writeValueWithResponse === 'function') {
+        await commandCharacteristic.writeValueWithResponse(PRESS_BYTES);
+      } else if (props.writeWithoutResponse && typeof commandCharacteristic.writeValueWithoutResponse === 'function') {
+        await commandCharacteristic.writeValueWithoutResponse(PRESS_BYTES);
+      } else if (typeof commandCharacteristic.writeValue === 'function') {
+        await commandCharacteristic.writeValue(PRESS_BYTES);
+      } else {
+        throw new Error('쓰기 가능한 BLE 특성이 아닙니다.');
+      }
+      lastPressAt = Date.now();
+      setStatus('lastAction', `${new Date().toLocaleTimeString('ko-KR')} · ${source}`, 'ok');
+      log(`SwitchBot PRESS 전송 성공 (${source})`, 'ok');
+    } finally {
+      pressing = false;
+    }
+  }
+
+  async function verifyCommand(payload, secret) {
+    if (!payload || payload.v !== 1 || payload.cmd !== 'PRESS') return false;
+    if (!Number.isFinite(payload.ts) || typeof payload.nonce !== 'string' || typeof payload.sig !== 'string') return false;
+    const age = Math.abs(Date.now() - payload.ts);
+    if (age > COMMAND_MAX_AGE_MS) {
+      log(`오래된 명령 무시 (${Math.round(age / 1000)}초)`, 'warn');
+      return false;
+    }
+    if (seenNonces.has(payload.nonce)) {
+      log('중복 명령 무시', 'warn');
+      return false;
+    }
+    const text = `1|PRESS|${payload.ts}|${payload.nonce}`;
+    const expected = await hmac(secret, text);
+    if (!safeEqual(expected, payload.sig)) {
+      log('보안 서명이 맞지 않는 명령 무시', 'warn');
+      return false;
+    }
+    seenNonces.add(payload.nonce);
+    if (seenNonces.size > 50) seenNonces.delete(seenNonces.values().next().value);
+    return true;
+  }
+
+  function openRelaySocket() {
+    if (!relayRunning) return;
+    const { topic, secret } = ensureCredentials();
+    if (relaySocket) {
+      try { relaySocket.close(); } catch (_) {}
+    }
+
+    setStatus('relayStatus', '인터넷 연결 중', 'warn');
+    const url = `wss://ntfy.sh/${encodeURIComponent(topic)}/ws`;
+    relaySocket = new WebSocket(url);
+
+    relaySocket.onopen = () => {
+      setStatus('relayStatus', '원격 명령 대기 중', 'ok');
+      log('ntfy 원격 채널 연결됨', 'ok');
+    };
+
+    relaySocket.onmessage = async (event) => {
+      try {
+        const envelope = JSON.parse(event.data);
+        if (envelope.event !== 'message' || typeof envelope.message !== 'string') return;
+        const payload = JSON.parse(envelope.message);
+        if (!(await verifyCommand(payload, secret))) return;
+        log('유효한 원격 PC 전원 명령 수신', 'ok');
+        await pressBot('원격');
+      } catch (err) {
+        if (String(err.message || '').includes('JSON')) return;
+        log(`원격 명령 처리 실패: ${err.message}`, 'error');
+      }
+    };
+
+    relaySocket.onerror = () => {
+      setStatus('relayStatus', '통신 오류', 'bad');
+      log('ntfy WebSocket 통신 오류', 'error');
+    };
+
+    relaySocket.onclose = () => {
+      relaySocket = null;
+      if (relayRunning) {
+        setStatus('relayStatus', '재연결 대기', 'warn');
+        log('원격 채널 끊김 · 4초 후 재연결', 'warn');
+        setTimeout(openRelaySocket, 4000);
+      } else {
+        setStatus('relayStatus', '중지됨', 'warn');
+      }
+    };
+  }
+
+  async function startHub() {
+    if (!commandCharacteristic || !botDevice?.gatt?.connected) {
+      const recovered = await reconnectRememberedDevice();
+      if (!recovered) throw new Error('먼저 SwitchBot 연결과 시험 누르기를 성공시키세요.');
+    }
+    relayRunning = true;
+    $('startBtn').disabled = true;
+    $('stopBtn').disabled = false;
+    await requestWakeProtection();
+    openRelaySocket();
+    showScreenSaverSoon();
+    log('허브 모드 시작', 'ok');
+  }
+
+  async function stopHub() {
+    relayRunning = false;
+    clearTimeout(reconnectTimer);
+    if (relaySocket) {
+      try { relaySocket.close(); } catch (_) {}
+    }
+    relaySocket = null;
+    hideScreenSaver();
+    $('startBtn').disabled = !commandCharacteristic;
+    $('stopBtn').disabled = true;
+    setStatus('relayStatus', '중지됨', 'warn');
+    await releaseWakeProtection();
+    log('허브 모드 중지');
+  }
+
+  async function shareRemoteLink() {
+    const { topic, secret } = ensureCredentials();
+    const url = remoteUrl(topic, secret);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'PC 켜기', text: '장원 PC 원격 전원 버튼', url });
+        log('원격 버튼 링크 공유창 열림', 'ok');
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert('원격 버튼 링크를 복사했습니다. 메인 아이폰으로 보내세요.');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        await navigator.clipboard.writeText(url);
+        alert('원격 버튼 링크를 복사했습니다.');
+      }
+    }
+  }
+
+  function bindHubUI() {
+    refreshCredentialUI();
+    updateBrowserStatus();
+
+    $('connectBtn').addEventListener('click', async () => {
+      $('connectBtn').disabled = true;
+      try { await chooseBot(false); }
+      catch (err) {
+        if (err.name !== 'NotFoundError') log(`자동 찾기 실패: ${err.message}`, 'error');
+      }
+      finally { $('connectBtn').disabled = false; }
+    });
+
+    $('connectAllBtn').addEventListener('click', async () => {
+      $('connectAllBtn').disabled = true;
+      try { await chooseBot(true); }
+      catch (err) {
+        if (err.name !== 'NotFoundError') log(`전체 기기 찾기 실패: ${err.message}`, 'error');
+      }
+      finally { $('connectAllBtn').disabled = false; }
+    });
+
+    $('testBtn').addEventListener('click', async () => {
+      $('testBtn').disabled = true;
+      try { await pressBot('시험'); }
+      catch (err) { log(err.message, 'error'); alert(err.message); }
+      finally { $('testBtn').disabled = false; }
+    });
+
+    $('startBtn').addEventListener('click', async () => {
+      try { await startHub(); }
+      catch (err) { log(err.message, 'error'); alert(err.message); }
+    });
+
+    $('stopBtn').addEventListener('click', stopHub);
+    $('shareBtn').addEventListener('click', shareRemoteLink);
+    $('regenBtn').addEventListener('click', async () => {
+      if (relayRunning && !confirm('허브를 중지하고 원격 주소를 새로 만들까요? 기존 원격 버튼은 더 이상 작동하지 않습니다.')) return;
+      await stopHub();
+      localStorage.removeItem(TOPIC_KEY);
+      localStorage.removeItem(SECRET_KEY);
+      refreshCredentialUI();
+      log('원격 채널과 보안키를 새로 생성함', 'ok');
+    });
+    $('screenSaver').addEventListener('click', () => {
+      hideScreenSaver();
+      if (relayRunning) showScreenSaverSoon();
+    });
+
+    $('copyLogBtn').addEventListener('click', async () => {
+      await navigator.clipboard.writeText(logLines.join('\n'));
+      alert('진단 기록을 복사했습니다.');
+    });
+
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && relayRunning) {
+        await requestWakeProtection();
+        if (!relaySocket || relaySocket.readyState > 1) openRelaySocket();
+      }
+    });
+
+    window.addEventListener('online', () => { if (relayRunning) openRelaySocket(); });
+    window.addEventListener('beforeunload', () => { relayRunning = false; hideScreenSaver(); if (relaySocket) relaySocket.close(); });
+
+    reconnectRememberedDevice().catch(() => {});
+  }
+
+  function parseRemoteConfig() {
+    const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+    if (params.get('mode') !== 'remote') return null;
+    const topic = params.get('topic') || '';
+    const secret = params.get('secret') || '';
+    if (!/^[A-Za-z0-9_-]{20,64}$/.test(topic) || secret.length < 30) return { invalid: true };
+    return { topic, secret };
+  }
+
+  async function sendRemotePress(topic, secret) {
+    const ts = Date.now();
+    const nonce = randomBase64Url(12);
+    const text = `1|PRESS|${ts}|${nonce}`;
+    const sig = await hmac(secret, text);
+    const payload = JSON.stringify({ v: 1, cmd: 'PRESS', ts, nonce, sig });
+    const endpoint = `https://ntfy.sh/${encodeURIComponent(topic)}?cache=no&firebase=no`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: payload,
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error(`명령 서버 응답 오류 ${response.status}`);
+  }
+
+  function bindRemoteUI(config) {
+    $('hubApp').classList.add('hidden');
+    $('remoteApp').classList.remove('hidden');
+    document.title = 'PC 켜기';
+
+    if (!config || config.invalid) {
+      $('powerBtn').disabled = true;
+      $('remoteResult').textContent = '원격 주소가 올바르지 않습니다. 공폰의 허브 화면에서 링크를 다시 공유하세요.';
+      $('remoteResult').className = 'notice';
+      return;
+    }
+
+    $('powerBtn').addEventListener('click', async () => {
+      const button = $('powerBtn');
+      button.disabled = true;
+      $('remoteResult').textContent = '명령 보내는 중…';
+      $('remoteResult').className = 'notice';
+      try {
+        await sendRemotePress(config.topic, config.secret);
+        $('remoteResult').textContent = '전원 명령을 보냈습니다. 집 공폰과 SwitchBot이 정상 연결돼 있으면 몇 초 안에 눌립니다.';
+        $('remoteResult').className = 'notice success-notice';
+      } catch (err) {
+        $('remoteResult').textContent = `전송 실패: ${err.message}`;
+        $('remoteResult').className = 'notice';
+      }
+      setTimeout(() => { button.disabled = false; }, MIN_PRESS_INTERVAL_MS);
+    });
+  }
+
+  const remoteConfig = parseRemoteConfig();
+  if (remoteConfig) bindRemoteUI(remoteConfig);
+  else bindHubUI();
+})();
+</script>
+</body>
+</html>
