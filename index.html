@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#07111f" />
   <meta name="color-scheme" content="dark" />
-  <title>장원 SwitchBot 웹 허브</title>
+  <title>장원 SwitchBot 웹 허브 v6</title>
   <style>
     :root {
       font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
@@ -184,13 +184,14 @@
       h1 { font-size: 25px; }
     }
   </style>
+  <!-- JW-SWITCHBOT-V6-MAC-ED2EC606313A -->
 </head>
 <body>
 <main>
   <section id="hubApp" class="hero">
-    <span class="badge">📱 iPhone 11 Pro용</span>
+    <span class="badge">📱 iPhone 11 Pro용 · MAC 필터 v6</span>
     <h1>장원 SwitchBot 웹 허브</h1>
-    <p class="muted">Bluefy에서 이 페이지를 열고 SwitchBot Bot을 연결하면, 다른 아이폰에서 인터넷으로 PC 전원 버튼을 누를 수 있습니다.</p>
+    <p class="muted">Bluefy에서 대상 Bot(ED:2E:C6:06:31:3A)을 연결하면, 다른 아이폰에서 인터넷으로 PC 전원 버튼을 누를 수 있습니다.</p>
 
     <div id="browserWarning" class="notice hidden"></div>
 
@@ -204,11 +205,12 @@
     <div class="panel">
       <h2>1. SwitchBot 연결</h2>
       <div class="buttons">
-        <button id="connectBtn">🔵 SwitchBot 자동 찾기</button>
-        <button id="connectAllBtn" class="ghost">기기가 안 보이면 모든 BLE 기기 보기</button>
+        <button id="connectBtn">🎯 Bot 3A 찾기 (최신 방식)</button>
+        <button id="connectMacBtn" class="secondary">🔬 MAC ED:2E:C6:06:31:3A 정밀 찾기</button>
+        <button id="connectAllBtn" class="ghost">마지막 수단: 모든 BLE 기기 보기</button>
         <button id="testBtn" class="secondary" disabled>🧪 시험으로 한 번 누르기</button>
       </div>
-      <div class="notice">기기 선택창에서는 <b>Bot</b>, <b>WoHand</b>, <b>SwitchBot</b>처럼 표시된 항목을 고르세요. SwitchBot 공식 앱은 연결 시험 중에는 완전히 종료해 두는 편이 좋습니다.</div>
+      <div class="notice success-notice"><b>대상 BLE MAC</b>: ED:2E:C6:06:31:3A<br>최신 Bot은 이름 없이 UUID로 보일 수 있습니다. 첫 버튼을 누른 뒤 항목이 하나 뜨면 그 항목을 선택하세요. 메인폰과 공폰의 SwitchBot 공식 앱은 완전히 종료해 두세요.</div>
     </div>
 
     <div class="panel">
@@ -248,7 +250,7 @@
     <div class="notice">버튼을 연속으로 누르지 마세요. PC가 이미 켜져 있으면 전원 버튼 설정에 따라 절전이나 종료가 될 수 있습니다.</div>
   </section>
 
-  <div class="footer">개인 소유 SwitchBot 제어용 · Topic과 보안키는 이 브라우저에만 저장됩니다.</div>
+  <div class="footer">v6 · 대상 MAC ED:2E:C6:06:31:3A · 개인 소유 SwitchBot 제어용</div>
 
   <div id="screenSaver" class="screen-saver hidden" role="button" aria-label="허브 화면으로 돌아가기">
     <div id="saverContent" class="saver-content">
@@ -265,6 +267,12 @@
 
   const SERVICE_UUID = 'cba20d00-224d-11e6-9fb8-0002a5d5c51b';
   const COMMAND_UUID = 'cba20002-224d-11e6-9fb8-0002a5d5c51b';
+  // SwitchBot 공식 BLE 문서: Bot V6.4+ 광고 서비스는 0xFD3D, 이전 버전은 0x000D.
+  const AD_SERVICE_UUIDS = [0xFD3D, 0x000D];
+  const TARGET_MAC = 'ED:2E:C6:06:31:3A';
+  const TARGET_MAC_FORWARD = new Uint8Array([0xED, 0x2E, 0xC6, 0x06, 0x31, 0x3A]);
+  const TARGET_MAC_REVERSE = new Uint8Array([0x3A, 0x31, 0x06, 0xC6, 0x2E, 0xED]);
+  const SWITCHBOT_COMPANY_IDS = [0x0969, 0x0059];
   const PRESS_BYTES = new Uint8Array([0x57, 0x01, 0x00]);
   const TOPIC_KEY = 'jw_switchbot_topic_v1';
   const SECRET_KEY = 'jw_switchbot_secret_v1';
@@ -465,11 +473,29 @@
     log('SwitchBot 명령 특성 연결 성공', 'ok');
   }
 
-  async function chooseBot(acceptAll = false) {
+  async function chooseBot(mode = 'modern') {
     if (!navigator.bluetooth) throw new Error('Bluefy에서 이 페이지를 열어야 합니다.');
-    const options = acceptAll
-      ? { acceptAllDevices: true, optionalServices: [SERVICE_UUID] }
-      : { filters: [{ services: [SERVICE_UUID] }], optionalServices: [SERVICE_UUID] };
+
+    let options;
+    if (mode === 'all') {
+      options = { acceptAllDevices: true, optionalServices: [SERVICE_UUID] };
+      log('모든 BLE 기기 목록을 엽니다.', 'warn');
+    } else if (mode === 'mac') {
+      const filters = [];
+      for (const companyIdentifier of SWITCHBOT_COMPANY_IDS) {
+        filters.push({ manufacturerData: [{ companyIdentifier, dataPrefix: TARGET_MAC_FORWARD }] });
+        filters.push({ manufacturerData: [{ companyIdentifier, dataPrefix: TARGET_MAC_REVERSE }] });
+      }
+      options = { filters, optionalServices: [SERVICE_UUID] };
+      log(`MAC ${TARGET_MAC} 전용 필터로 찾는 중`);
+    } else {
+      // 최신 펌웨어(0xFD3D), 구형 펌웨어(0x000D), 아주 구형 128-bit 광고를 모두 포함합니다.
+      const filters = AD_SERVICE_UUIDS.map((service) => ({ services: [service] }));
+      filters.push({ services: [SERVICE_UUID] });
+      options = { filters, optionalServices: [SERVICE_UUID] };
+      log('최신·구형 SwitchBot 광고 UUID로 찾는 중');
+    }
+
     const device = await navigator.bluetooth.requestDevice(options);
     await connectSelectedDevice(device);
   }
@@ -661,16 +687,28 @@
 
     $('connectBtn').addEventListener('click', async () => {
       $('connectBtn').disabled = true;
-      try { await chooseBot(false); }
+      try { await chooseBot('modern'); }
       catch (err) {
-        if (err.name !== 'NotFoundError') log(`자동 찾기 실패: ${err.message}`, 'error');
+        if (err.name !== 'NotFoundError') log(`최신 방식 찾기 실패: ${err.message}`, 'error');
       }
       finally { $('connectBtn').disabled = false; }
     });
 
+    $('connectMacBtn').addEventListener('click', async () => {
+      $('connectMacBtn').disabled = true;
+      try { await chooseBot('mac'); }
+      catch (err) {
+        if (err.name !== 'NotFoundError') {
+          log(`MAC 정밀 찾기 실패: ${err.message}`, 'error');
+          alert('Bluefy가 MAC 제조사 필터를 지원하지 않거나 Bot 광고를 아직 못 찾았습니다. 먼저 위의 최신 방식 버튼을 다시 눌러보세요.');
+        }
+      }
+      finally { $('connectMacBtn').disabled = false; }
+    });
+
     $('connectAllBtn').addEventListener('click', async () => {
       $('connectAllBtn').disabled = true;
-      try { await chooseBot(true); }
+      try { await chooseBot('all'); }
       catch (err) {
         if (err.name !== 'NotFoundError') log(`전체 기기 찾기 실패: ${err.message}`, 'error');
       }
